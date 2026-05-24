@@ -1,0 +1,4 @@
+-keep class com.toxictrace.tanktracker.api.** { *; }
+-keep class com.toxictrace.tanktracker.model.** { *; }
+-dontwarn okhttp3.**
+-dontwarn retrofit2.**
