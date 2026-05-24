@@ -68,5 +68,6 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.gson)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.appcompat)
     debugImplementation(libs.androidx.ui.tooling)
 }
