@@ -35,6 +35,13 @@ enum class SortMode { BATTLES, WIN_RATE, AVG_DAMAGE, SURVIVAL }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArmoryScreen(tanks: List<TankInfo>) {
+    var selectedTank by remember { mutableStateOf<TankInfo?>(null) }
+
+    if (selectedTank != null) {
+        TankDetailScreen(tank = selectedTank!!, onBack = { selectedTank = null })
+        return
+    }
+
     var search by remember { mutableStateOf("") }
     var selectedClass by remember { mutableStateOf<TankClass?>(null) }
     var sortMode by remember { mutableStateOf(SortMode.BATTLES) }
@@ -62,7 +69,6 @@ fun ArmoryScreen(tanks: List<TankInfo>) {
         modifier = Modifier.fillMaxSize().background(DarkBg).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Header
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column {
                 Text("TANK CATALOGUE", color = SteelGray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
@@ -76,11 +82,9 @@ fun ArmoryScreen(tanks: List<TankInfo>) {
             ) { Text("${filtered.size} / ${tanks.size}", color = SteelGray, fontSize = 9.sp, fontFamily = FontFamily.Monospace) }
         }
 
-        // Search
         TacticalCard {
             OutlinedTextField(
-                value = search,
-                onValueChange = { search = it },
+                value = search, onValueChange = { search = it },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search vehicles...", color = SteelGray, fontSize = 11.sp, fontFamily = FontFamily.Monospace) },
                 colors = OutlinedTextFieldDefaults.colors(
@@ -95,8 +99,6 @@ fun ArmoryScreen(tanks: List<TankInfo>) {
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(8.dp))
-
-            // Class filters
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 FilterChip(selected = selectedClass == null, onClick = { selectedClass = null },
                     label = { Text("ALL", fontSize = 8.sp, fontFamily = FontFamily.Monospace) })
@@ -108,8 +110,6 @@ fun ArmoryScreen(tanks: List<TankInfo>) {
                 FilterChip(selected = showPremiumOnly, onClick = { showPremiumOnly = !showPremiumOnly },
                     label = { Text("★", fontSize = 10.sp) })
             }
-
-            // Sort
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("SORT:", color = SteelGray, fontSize = 8.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.align(Alignment.CenterVertically))
                 SortMode.values().forEach { mode ->
@@ -129,14 +129,16 @@ fun ArmoryScreen(tanks: List<TankInfo>) {
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.fillMaxSize()) {
-                items(filtered) { tank -> TankCard(tank) }
+                items(filtered, key = { it.id }) { tank ->
+                    TankCard(tank = tank, onClick = { selectedTank = tank })
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TankCard(tank: TankInfo) {
+private fun TankCard(tank: TankInfo, onClick: () -> Unit) {
     val wrColor = when {
         tank.winRate >= 60 -> Color(0xFFA3FFA3)
         tank.winRate >= 54 -> Color(0xFF84DFAF)
@@ -145,12 +147,11 @@ private fun TankCard(tank: TankInfo) {
     }
     val premiumBorder = if (tank.isPremium) Color(0xFFFBBF24).copy(0.25f) else DarkCardBorder
 
-    TacticalCard(borderColor = premiumBorder) {
+    TacticalCard(borderColor = premiumBorder, modifier = Modifier.clickable(onClick = onClick)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            // Left: info
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(toRoman(tank.tier), color = NeonOrange.copy(0.8f), fontSize = 10.sp,
+                    Text(toRomanInArmory(tank.tier), color = NeonOrange.copy(0.8f), fontSize = 10.sp,
                         fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, fontFamily = FontFamily.Monospace)
                     TankMiniClassIcon(tankClass = tank.tankClass)
                     NationBadge(nation = tank.nation)
@@ -161,15 +162,11 @@ private fun TankCard(tank: TankInfo) {
                 Text(tank.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
                 Text("${tank.battles} battles · ${tank.avgXP} avg XP", color = SteelGray, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
             }
-
-            // Center: image
             if (tank.imageUrl != null) {
                 AsyncImage(model = tank.imageUrl, contentDescription = tank.name,
                     modifier = Modifier.size(80.dp, 44.dp), contentScale = ContentScale.Fit)
                 Spacer(modifier = Modifier.width(6.dp))
             }
-
-            // Right: stats
             Column(horizontalAlignment = Alignment.End) {
                 Text("WIN RATE", color = SteelGray, fontSize = 7.sp, fontFamily = FontFamily.Monospace)
                 Text("${tank.winRate}%", color = wrColor, fontSize = 13.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
@@ -184,7 +181,7 @@ private fun TankCard(tank: TankInfo) {
     }
 }
 
-private fun toRoman(tier: Int) = when (tier) {
+private fun toRomanInArmory(tier: Int) = when (tier) {
     10 -> "X"; 9 -> "IX"; 8 -> "VIII"; 7 -> "VII"; 6 -> "VI"
     5 -> "V"; 4 -> "IV"; 3 -> "III"; 2 -> "II"; 1 -> "I"; else -> "?"
 }

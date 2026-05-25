@@ -1,5 +1,6 @@
 package com.toxictrace.tanktracker.ui.screens
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -35,128 +37,70 @@ fun SearchScreen(
     var query by remember { mutableStateOf("") }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF0A0C0E), DarkBg, Color(0xFF111418))
-                )
-            )
+        modifier = Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF0A0C0E), DarkBg, Color(0xFF111418)))
+        )
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(48.dp))
 
-            // Logo / Title
+            // Logo
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "⬡",
-                    color = NeonOrange,
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Black
-                )
+                Text("⬡", color = NeonOrange, fontSize = 48.sp, fontWeight = FontWeight.Black)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "TANK TRACKER",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 4.sp
-                )
-                Text(
-                    text = "EU SERVER STATISTICS",
-                    color = SteelGray,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 2.sp
-                )
+                Text("TANK TRACKER", color = Color.White, fontSize = 22.sp,
+                    fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, letterSpacing = 4.sp)
+                Text("EU SERVER STATISTICS", color = SteelGray, fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
             }
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Search field
             OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
+                value = query, onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(
-                        "Enter player nickname...",
-                        color = SteelGray,
-                        fontSize = 13.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
-                },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = NeonOrange)
-                },
+                placeholder = { Text("Enter player nickname...", color = SteelGray, fontSize = 13.sp, fontFamily = FontFamily.Monospace) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = NeonOrange) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = NeonOrange,
-                    unfocusedBorderColor = DarkCardBorder,
-                    focusedContainerColor = DarkSurface,
-                    unfocusedContainerColor = DarkSurface,
+                    focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                    focusedBorderColor = NeonOrange, unfocusedBorderColor = DarkCardBorder,
+                    focusedContainerColor = DarkSurface, unfocusedContainerColor = DarkSurface,
                     cursorColor = NeonOrange
                 ),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
+                shape = RoundedCornerShape(8.dp), singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {
-                    if (query.length >= 3) onSearch(query)
-                }),
-                textStyle = LocalTextStyle.current.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 14.sp
-                )
+                keyboardActions = KeyboardActions(onSearch = { if (query.length >= 3) onSearch(query) }),
+                textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
                 onClick = { if (query.length >= 3) onSearch(query) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = NeonOrange),
                 shape = RoundedCornerShape(8.dp),
                 enabled = query.length >= 3 && uiState !is UiState.Loading
             ) {
-                if (uiState is UiState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = Color.Black,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        "SEARCH PILOT",
-                        color = Color.Black,
-                        fontWeight = FontWeight.Black,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        letterSpacing = 1.sp
-                    )
-                }
+                Text("SEARCH PILOT", color = Color.Black, fontWeight = FontWeight.Black,
+                    fontFamily = FontFamily.Monospace, fontSize = 13.sp, letterSpacing = 1.sp)
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Results / Error
             when (uiState) {
+                is UiState.Loading -> {
+                    // Skeleton loading
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(4) { SkeletonRow() }
+                    }
+                }
                 is UiState.SearchResults -> {
-                    Text(
-                        "SELECT PLAYER",
-                        color = SteelGray,
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Text("SELECT PLAYER", color = SteelGray, fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(uiState.results) { player ->
@@ -166,14 +110,11 @@ fun SearchScreen(
                 }
                 is UiState.Error -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(NeonRed.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
-                            .border(1.dp, NeonRed.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                        modifier = Modifier.fillMaxWidth()
+                            .background(NeonRed.copy(0.08f), RoundedCornerShape(8.dp))
+                            .border(1.dp, NeonRed.copy(0.3f), RoundedCornerShape(8.dp))
                             .padding(12.dp)
-                    ) {
-                        Text(uiState.message, color = NeonRed, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
-                    }
+                    ) { Text(uiState.message, color = NeonRed, fontSize = 12.sp, fontFamily = FontFamily.Monospace) }
                 }
                 else -> {}
             }
@@ -184,8 +125,7 @@ fun SearchScreen(
 @Composable
 private fun PlayerResultRow(player: PlayerSearchItem, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
             .background(DarkSurface, RoundedCornerShape(8.dp))
             .border(1.dp, DarkCardBorder, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
@@ -193,18 +133,27 @@ private fun PlayerResultRow(player: PlayerSearchItem, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            player.nickname,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace
-        )
-        Text(
-            "#${player.accountId}",
-            color = SteelGray,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace
-        )
+        Text(player.nickname, color = Color.White, fontSize = 14.sp,
+            fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+        Text("#${player.accountId}", color = SteelGray, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
     }
+}
+
+@Composable
+private fun SkeletonRow() {
+    val inf = rememberInfiniteTransition(label = "shimmer")
+    val x by inf.animateFloat(
+        initialValue = -300f, targetValue = 1000f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing)),
+        label = "x"
+    )
+    val shimmer = Brush.linearGradient(
+        colors = listOf(DarkSurface, DarkSurfaceLighter, DarkSurface),
+        start = Offset(x, 0f), end = Offset(x + 300f, 0f)
+    )
+    Box(
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+            .background(shimmer, RoundedCornerShape(8.dp))
+            .border(1.dp, DarkCardBorder, RoundedCornerShape(8.dp))
+    )
 }
