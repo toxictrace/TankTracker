@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-// ── Response models ──────────────────────────────────────────────────────────
+// ── Account Search ───────────────────────────────────────────────────────────
 
 data class SearchResponse(
     val status: String,
@@ -17,6 +17,8 @@ data class PlayerSearchItem(
     @SerializedName("account_id") val accountId: Long,
     val nickname: String
 )
+
+// ── Account Info ─────────────────────────────────────────────────────────────
 
 data class AccountInfoResponse(
     val status: String,
@@ -29,8 +31,7 @@ data class AccountData(
     val statistics: Statistics?,
     @SerializedName("global_rating") val globalRating: Int,
     @SerializedName("created_at") val createdAt: Long,
-    @SerializedName("last_battle_time") val lastBattleTime: Long,
-    @SerializedName("clan_id") val clanId: Long?
+    @SerializedName("last_battle_time") val lastBattleTime: Long
 )
 
 data class Statistics(
@@ -38,26 +39,26 @@ data class Statistics(
 )
 
 data class BattleStats(
-    val battles: Int,
-    val wins: Int,
-    val losses: Int,
-    val frags: Int,
-    val survived_battles: Int,
-    val hits: Int,
-    val shots: Int,
-    @SerializedName("damage_dealt") val damageDealt: Long,
-    val xp: Long
+    val battles: Int = 0,
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val frags: Int = 0,
+    @SerializedName("survived_battles") val survivedBattles: Int = 0,
+    val hits: Int = 0,
+    val shots: Int = 0,
+    @SerializedName("damage_dealt") val damageDealt: Long = 0L,
+    @SerializedName("damage_assisted_radio") val damageAssistedRadio: Long = 0L,
+    @SerializedName("damage_assisted_track") val damageAssistedTrack: Long = 0L,
+    @SerializedName("damage_blocked_by_armour") val damageBlockedByArmour: Long = 0L,
+    @SerializedName("spotted") val spotted: Int = 0,
+    val xp: Long = 0L,
+    @SerializedName("battle_avg_xp") val battleAvgXp: Int = 0,
+    @SerializedName("max_damage") val maxDamage: Int = 0,
+    @SerializedName("max_frags") val maxFrags: Int = 0,
+    val draws: Int = 0
 )
 
-data class ClanInfoResponse(
-    val status: String,
-    val data: Map<String, ClanData?>?
-)
-
-data class ClanData(
-    val tag: String,
-    val name: String
-)
+// ── Clan ─────────────────────────────────────────────────────────────────────
 
 data class PlayerClanResponse(
     val status: String,
@@ -74,6 +75,8 @@ data class ClanShortData(
     val name: String
 )
 
+// ── Tank Stats ────────────────────────────────────────────────────────────────
+
 data class TanksStatsResponse(
     val status: String,
     val data: Map<String, List<TankStatItem>?>?
@@ -82,20 +85,25 @@ data class TanksStatsResponse(
 data class TankStatItem(
     @SerializedName("tank_id") val tankId: Long,
     val all: TankBattleStats?,
-    @SerializedName("mark_of_mastery") val markOfMastery: Int,
-    @SerializedName("marks_on_gun") val marksOnGun: Int?
+    @SerializedName("mark_of_mastery") val markOfMastery: Int = 0
 )
 
 data class TankBattleStats(
-    val battles: Int,
-    val wins: Int,
-    @SerializedName("damage_dealt") val damageDealt: Long,
-    val frags: Int,
-    val survived: Int,
-    val hits: Int,
-    val shots: Int,
-    val xp: Long
+    val battles: Int = 0,
+    val wins: Int = 0,
+    @SerializedName("damage_dealt") val damageDealt: Long = 0L,
+    @SerializedName("damage_assisted_radio") val damageAssistedRadio: Long = 0L,
+    @SerializedName("damage_assisted_track") val damageAssistedTrack: Long = 0L,
+    @SerializedName("damage_blocked_by_armour") val damageBlockedByArmour: Long = 0L,
+    val frags: Int = 0,
+    @SerializedName("survived_battles") val survivedBattles: Int = 0,
+    val hits: Int = 0,
+    val shots: Int = 0,
+    val spotted: Int = 0,
+    val xp: Long = 0L
 )
+
+// ── Vehicle Encyclopedia ──────────────────────────────────────────────────────
 
 data class VehicleInfoResponse(
     val status: String,
@@ -108,14 +116,16 @@ data class VehicleData(
     val nation: String,
     val tier: Int,
     val type: String,
+    @SerializedName("is_premium") val isPremium: Boolean = false,
     val images: VehicleImages?
 )
 
 data class VehicleImages(
-    @SerializedName("big_icon") val bigIcon: String?
+    @SerializedName("big_icon") val bigIcon: String?,
+    @SerializedName("small_icon") val smallIcon: String?
 )
 
-// ── Retrofit interface ───────────────────────────────────────────────────────
+// ── API Interface ─────────────────────────────────────────────────────────────
 
 interface WargamingApi {
 
@@ -131,7 +141,7 @@ interface WargamingApi {
     suspend fun getAccountInfo(
         @Query("application_id") appId: String,
         @Query("account_id") accountId: Long,
-        @Query("fields") fields: String = "nickname,account_id,global_rating,statistics.all"
+        @Query("fields") fields: String = "nickname,account_id,global_rating,created_at,last_battle_time,statistics.all"
     ): AccountInfoResponse
 
     @GET("wot/clans/accountinfo/")
@@ -145,18 +155,18 @@ interface WargamingApi {
     suspend fun getTankStats(
         @Query("application_id") appId: String,
         @Query("account_id") accountId: Long,
-        @Query("fields") fields: String = "tank_id,all,mark_of_mastery,marks_on_gun"
+        @Query("fields") fields: String = "tank_id,all,mark_of_mastery"
     ): TanksStatsResponse
 
     @GET("wot/encyclopedia/vehicles/")
     suspend fun getVehicleInfo(
         @Query("application_id") appId: String,
         @Query("tank_id") tankIds: String,
-        @Query("fields") fields: String = "tank_id,name,nation,tier,type,images.big_icon"
+        @Query("fields") fields: String = "tank_id,name,nation,tier,type,is_premium,images.big_icon,images.small_icon"
     ): VehicleInfoResponse
 }
 
-// ── Singleton ────────────────────────────────────────────────────────────────
+// ── Singleton ─────────────────────────────────────────────────────────────────
 
 object WgApiClient {
     const val APP_ID = "f21d8f6446559bf7c2bb4f61003e9d28"

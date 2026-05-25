@@ -3,12 +3,9 @@ package com.toxictrace.tanktracker.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.toxictrace.tanktracker.api.PlayerSearchItem
+import com.toxictrace.tanktracker.api.VehicleData
 import com.toxictrace.tanktracker.api.WgApiClient
-import com.toxictrace.tanktracker.model.MasteryBadge
-import com.toxictrace.tanktracker.model.PlayerProfile
-import com.toxictrace.tanktracker.model.TankInfo
-import com.toxictrace.tanktracker.model.toMasteryBadge
-import com.toxictrace.tanktracker.model.toTankClass
+import com.toxictrace.tanktracker.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -30,8 +27,6 @@ class PlayerViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState
 
-    // ── Search players ────────────────────────────────────────────────────────
-
     fun searchPlayers(query: String) {
         if (query.length < 3) return
         viewModelScope.launch {
@@ -39,18 +34,15 @@ class PlayerViewModel : ViewModel() {
             try {
                 val resp = api.searchPlayers(appId, query)
                 val items = resp.data ?: emptyList()
-                if (items.isEmpty()) {
-                    _uiState.value = UiState.Error("No players found for \"$query\"")
-                } else {
-                    _uiState.value = UiState.SearchResults(items)
-                }
+                _uiState.value = if (items.isEmpty())
+                    UiState.Error("No players found for \"$query\"")
+                else
+                    UiState.SearchResults(items)
             } catch (e: Exception) {
                 _uiState.value = UiState.Error("Network error: ${e.message}")
             }
         }
     }
-
-    // ── Load full profile by accountId ────────────────────────────────────────
 
     fun loadProfile(accountId: Long) {
         viewModelScope.launch {
@@ -61,124 +53,173 @@ class PlayerViewModel : ViewModel() {
                 val accountData = accountResp.data?.get(accountId.toString())
                     ?: run { _uiState.value = UiState.Error("Account not found"); return@launch }
 
-                // 2. Clan info
-                var clanTag = ""
-                var clanName = ""
+                val s = accountData.statistics?.all
+                val battles   = s?.battles ?: 0
+                val wins      = s?.wins ?: 0
+                val frags     = s?.frags ?: 0
+                val survived  = s?.survivedBattles ?: 0
+                val hits      = s?.hits ?: 0
+                val shots     = s?.shots ?: 0
+                val dmg       = s?.damageDealt ?: 0L
+                val assistR   = s?.damageAssistedRadio ?: 0L
+                val assistT   = s?.damageAssistedTrack ?: 0L
+                val blocked   = s?.damageBlockedByArmour ?: 0L
+                val spotted   = s?.spotted ?: 0
+                val xp        = s?.xp ?: 0L
+
+                val b = battles.coerceAtLeast(1)
+                val deaths = (battles - survived).coerceAtLeast(1)
+
+                val winRate    = (wins.toDouble()    / b * 100).roundTo(2)
+                val avgDmg     = (dmg / b).toInt()
+                val avgAssist  = ((assistR + assistT) / b).toInt()
+                val avgBlocked = (blocked / b).toInt()
+                val avgSpotted = (spotted.toDouble() / b).roundTo(2)
+                val avgFrags   = (frags.toDouble() / b).roundTo(2)
+                val avgXP      = (xp / b).toInt()
+                val kdRatio    = (frags.toDouble() / deaths).roundTo(2)
+                val survival   = (survived.toDouble() / b * 100).roundTo(1)
+                val accuracy   = if (shots > 0) (hits.toDouble() / shots * 100).roundTo(1) else 0.0
+
+                // 2. Clan
+                var clanTag = ""; var clanName = ""
                 try {
-                    val clanResp = api.getPlayerClan(appId, accountId)
-                    val clanData = clanResp.data?.get(accountId.toString())
-                    clanTag = clanData?.clan?.tag ?: ""
-                    clanName = clanData?.clan?.name ?: ""
+                    val cr = api.getPlayerClan(appId, accountId)
+                    cr.data?.get(accountId.toString())?.clan?.let {
+                        clanTag = it.tag; clanName = it.name
+                    }
                 } catch (_: Exception) {}
 
                 // 3. Tank stats
-                val tankStatsResp = api.getTankStats(appId, accountId)
-                val tankStatsList = tankStatsResp.data?.get(accountId.toString()) ?: emptyList()
+                val tanks = mutableListOf<TankInfo>()
+                try {
+                    val tankResp = api.getTankStats(appId, accountId)
+                    val statList = tankResp.data?.get(accountId.toString())
+                        ?.filter { (it.all?.battles ?: 0) > 0 }
+                        ?.sortedByDescending { it.all?.battles ?: 0 }
+                        ?: emptyList()
 
-                // 4. Vehicle encyclopedia (batch, max 100 tanks)
-                val topTanks = tankStatsList
-                    .filter { (it.all?.battles ?: 0) > 0 }
-                    .sortedByDescending { it.all?.battles ?: 0 }
-                    .take(100)
+                    // 4. Encyclopedia in batches of 100
+                    val vehicleMap = mutableMapOf<Long, VehicleData>()
+                    statList.chunked(100).forEach { batch ->
+                        try {
+                            val ids = batch.joinToString(",") { it.tankId.toString() }
+                            api.getVehicleInfo(appId, ids).data?.forEach { (k, v) ->
+                                if (v != null) vehicleMap[k.toLong()] = v
+                            }
+                        } catch (_: Exception) {}
+                    }
 
-                val vehicleMap = mutableMapOf<Long, com.toxictrace.tanktracker.api.VehicleData>()
-                if (topTanks.isNotEmpty()) {
-                    try {
-                        val ids = topTanks.joinToString(",") { it.tankId.toString() }
-                        val vehicleResp = api.getVehicleInfo(appId, ids)
-                        vehicleResp.data?.forEach { (k, v) ->
-                            if (v != null) vehicleMap[k.toLong()] = v
-                        }
-                    } catch (_: Exception) {}
-                }
+                    // Avg tier from tanks weighted by battles
+                    var tierSum = 0.0; var tierBattles = 0
+                    statList.forEach { stat ->
+                        val tb = stat.all?.battles ?: 0
+                        if (tb == 0) return@forEach
+                        val tw  = stat.all?.wins ?: 0
+                        val td  = stat.all?.damageDealt ?: 0L
+                        val tar = stat.all?.damageAssistedRadio ?: 0L
+                        val tat = stat.all?.damageAssistedTrack ?: 0L
+                        val tbl = stat.all?.damageBlockedByArmour ?: 0L
+                        val tf  = stat.all?.frags ?: 0
+                        val tsv = stat.all?.survivedBattles ?: 0
+                        val th  = stat.all?.hits ?: 0
+                        val ts  = stat.all?.shots ?: 0
+                        val tsp = stat.all?.spotted ?: 0
+                        val tx  = stat.all?.xp ?: 0L
+                        val veh = vehicleMap[stat.tankId]
 
-                // 5. Build TankInfo list
-                val tanks = topTanks.mapNotNull { stat ->
-                    val veh = vehicleMap[stat.tankId] ?: return@mapNotNull null
-                    val battles = stat.all?.battles ?: 0
-                    if (battles == 0) return@mapNotNull null
-                    val wins = stat.all?.wins ?: 0
-                    val dmg = stat.all?.damageDealt ?: 0L
-                    val xp = stat.all?.xp ?: 0L
-                    TankInfo(
-                        id = stat.tankId,
-                        name = veh.name,
-                        nation = veh.nation.replaceFirstChar { it.uppercase() },
-                        tier = veh.tier,
-                        tankClass = veh.type.toTankClass(),
-                        battles = battles,
-                        winRate = (wins.toDouble() / battles * 100).roundTo(2),
-                        avgDamage = if (battles > 0) (dmg / battles).toInt() else 0,
-                        avgXP = if (battles > 0) (xp / battles).toInt() else 0,
-                        marksOfExcellence = stat.marksOnGun ?: 0,
-                        masteryBadge = stat.markOfMastery.toMasteryBadge(),
-                        imageUrl = veh.images?.bigIcon
+                        veh?.tier?.let { t -> tierSum += t * tb; tierBattles += tb }
+
+                        tanks.add(TankInfo(
+                            id = stat.tankId,
+                            name = veh?.name ?: "Tank #${stat.tankId}",
+                            nation = veh?.nation?.replaceFirstChar { it.uppercase() } ?: "Unknown",
+                            tier = veh?.tier ?: 0,
+                            tankClass = veh?.type?.toTankClass() ?: TankClass.MEDIUM,
+                            isPremium = veh?.isPremium ?: false,
+                            battles = tb,
+                            winRate = (tw.toDouble() / tb * 100).roundTo(2),
+                            avgDamage = (td / tb).toInt(),
+                            avgAssist = ((tar + tat) / tb).toInt(),
+                            avgBlocked = (tbl / tb).toInt(),
+                            avgSpotted = (tsp.toDouble() / tb).roundTo(2),
+                            avgFrags = (tf.toDouble() / tb).roundTo(2),
+                            avgXP = (tx / tb).toInt(),
+                            survivalRate = (tsv.toDouble() / tb * 100).roundTo(1),
+                            accuracy = if (ts > 0) (th.toDouble() / ts * 100).roundTo(1) else 0.0,
+                            marksOfExcellence = 0,
+                            masteryBadge = stat.markOfMastery.toMasteryBadge(),
+                            imageUrl = veh?.images?.bigIcon
+                        ))
+                    }
+
+                    val avgTier = if (tierBattles > 0) (tierSum / tierBattles).roundTo(1) else 0.0
+
+                    val profile = PlayerProfile(
+                        accountId = accountId,
+                        nickname = accountData.nickname,
+                        clanTag = clanTag,
+                        clanName = clanName,
+                        globalRating = accountData.globalRating,
+                        createdAt = accountData.createdAt,
+                        lastBattleTime = accountData.lastBattleTime,
+                        wn8Value = approximateWn8(winRate, avgDmg, battles),
+                        winRatePct = winRate,
+                        battlesPlayed = battles,
+                        avgDamage = avgDmg,
+                        avgAssist = avgAssist,
+                        avgBlocked = avgBlocked,
+                        avgSpotted = avgSpotted,
+                        avgFrags = avgFrags,
+                        kdRatio = kdRatio,
+                        survivalRate = survival,
+                        accuracyPct = accuracy,
+                        avgXP = avgXP,
+                        avgTier = avgTier,
+                        maxDamage = s?.maxDamage ?: 0,
+                        maxFrags = s?.maxFrags ?: 0,
+                        tanks = tanks
                     )
+                    _uiState.value = UiState.Success(profile)
+
+                } catch (e: Exception) {
+                    // Even if tanks fail — show profile with empty tanks
+                    val profile = PlayerProfile(
+                        accountId = accountId,
+                        nickname = accountData.nickname,
+                        clanTag = clanTag, clanName = clanName,
+                        globalRating = accountData.globalRating,
+                        createdAt = accountData.createdAt,
+                        lastBattleTime = accountData.lastBattleTime,
+                        wn8Value = approximateWn8(winRate, avgDmg, battles),
+                        winRatePct = winRate, battlesPlayed = battles,
+                        avgDamage = avgDmg, avgAssist = avgAssist,
+                        avgBlocked = avgBlocked, avgSpotted = avgSpotted,
+                        avgFrags = avgFrags, kdRatio = kdRatio,
+                        survivalRate = survival, accuracyPct = accuracy,
+                        avgXP = avgXP, avgTier = 0.0,
+                        maxDamage = s?.maxDamage ?: 0,
+                        maxFrags = s?.maxFrags ?: 0,
+                        tanks = emptyList()
+                    )
+                    _uiState.value = UiState.Success(profile)
                 }
-
-                // 6. Global stats from account
-                val stats = accountData.statistics?.all
-                val battles = stats?.battles ?: 0
-                val wins = stats?.wins ?: 0
-                val frags = stats?.frags ?: 0
-                val survived = stats?.survived_battles ?: 0
-                val hits = stats?.hits ?: 0
-                val shots = stats?.shots ?: 0
-                val totalDmg = tanks.sumOf { it.avgDamage.toLong() * it.battles }
-                val totalBattles = tanks.sumOf { it.battles }.coerceAtLeast(1)
-                val avgDmg = (totalDmg / totalBattles).toInt()
-                val losses = stats?.losses ?: 0
-                val kdRatio = if (losses > 0) (frags.toDouble() / (battles - survived).coerceAtLeast(1)).roundTo(2) else frags.toDouble()
-                val survivalRate = if (battles > 0) (survived.toDouble() / battles * 100).roundTo(1) else 0.0
-                val accuracy = if (shots > 0) (hits.toDouble() / shots * 100).roundTo(1) else 0.0
-                val winRatePct = if (battles > 0) (wins.toDouble() / battles * 100).roundTo(2) else 0.0
-                val avgXP = if (battles > 0) ((stats?.xp ?: 0L) / battles).toInt() else 0
-
-                // Simple WN8 approximation from win rate + avg damage
-                val approxWn8 = approximateWn8(winRatePct, avgDmg, battles)
-
-                val profile = PlayerProfile(
-                    accountId = accountId,
-                    nickname = accountData.nickname,
-                    clanTag = clanTag,
-                    clanName = clanName,
-                    globalRating = accountData.globalRating,
-                    wn8Value = approxWn8,
-                    winRatePct = winRatePct,
-                    battlesPlayed = battles,
-                    avgDamage = avgDmg,
-                    kdRatio = kdRatio,
-                    survivalRate = survivalRate,
-                    accuracyPct = accuracy,
-                    avgXP = avgXP,
-                    tanks = tanks
-                )
-
-                _uiState.value = UiState.Success(profile)
 
             } catch (e: Exception) {
-                _uiState.value = UiState.Error("Failed to load profile: ${e.message}")
+                _uiState.value = UiState.Error("Failed to load: ${e.message}")
             }
         }
     }
 
-    fun resetToIdle() {
-        _uiState.value = UiState.Idle
-    }
+    fun resetToIdle() { _uiState.value = UiState.Idle }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    // Very rough WN8 approximation (real WN8 needs expected values table)
     private fun approximateWn8(winRate: Double, avgDmg: Int, battles: Int): Int {
         if (battles < 10) return 0
-        val winFactor = (winRate - 49.0) * 40
-        val dmgFactor = (avgDmg / 10.0)
-        return (dmgFactor + winFactor).toInt().coerceIn(0, 4000)
+        return ((avgDmg / 10.0) + (winRate - 49.0) * 40).toInt().coerceIn(0, 4000)
     }
 
-    private fun Double.roundTo(decimals: Int): Double {
-        var multiplier = 1.0
-        repeat(decimals) { multiplier *= 10 }
-        return (this * multiplier).roundToInt() / multiplier
+    private fun Double.roundTo(d: Int): Double {
+        var m = 1.0; repeat(d) { m *= 10 }
+        return (this * m).roundToInt() / m
     }
 }
