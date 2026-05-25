@@ -131,7 +131,7 @@ interface WargamingApi {
     suspend fun getAccountInfo(
         @Query("application_id") appId: String,
         @Query("account_id") accountId: Long,
-        @Query("fields") fields: String = "nickname,account_id,statistics,global_rating,created_at,last_battle_time,clan_id"
+        @Query("fields") fields: String = "nickname,account_id,global_rating,statistics.all"
     ): AccountInfoResponse
 
     @GET("wot/clans/accountinfo/")
