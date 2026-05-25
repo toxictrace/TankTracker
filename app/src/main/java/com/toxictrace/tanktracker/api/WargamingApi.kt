@@ -83,7 +83,7 @@ data class TankStatItem(
     @SerializedName("tank_id") val tankId: Long,
     val all: TankBattleStats?,
     @SerializedName("mark_of_mastery") val markOfMastery: Int,
-    @SerializedName("marks_on_gun") val marksOnGun: Int?
+    val marksOnGun: Int? = null
 )
 
 data class TankBattleStats(
@@ -145,7 +145,7 @@ interface WargamingApi {
     suspend fun getTankStats(
         @Query("application_id") appId: String,
         @Query("account_id") accountId: Long,
-        @Query("fields") fields: String = "tank_id,all,mark_of_mastery,marks_on_gun"
+        @Query("fields") fields: String = "tank_id,all,mark_of_mastery"
     ): TanksStatsResponse
 
     @GET("wot/encyclopedia/vehicles/")
