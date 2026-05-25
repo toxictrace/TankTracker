@@ -162,10 +162,10 @@ fun TankDetailScreen(tank: TankInfo, onBack: () -> Unit) {
                     fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MasteryBadgeDisplay("III", tank.masteryBadge.ordinal >= 1, Color(0xFFD97706))
-                    MasteryBadgeDisplay("II",  tank.masteryBadge.ordinal >= 2, Color(0xFF9CA3AF))
-                    MasteryBadgeDisplay("I",   tank.masteryBadge.ordinal >= 3, Color(0xFFD1D5DB))
-                    MasteryBadgeDisplay("ACE", tank.masteryBadge.ordinal >= 4, Color(0xFFFBBF24))
+                    Box(modifier = Modifier.weight(1f)) { MasteryBadgeDisplay("III", tank.masteryBadge.ordinal >= 1, Color(0xFFD97706)) }
+                    Box(modifier = Modifier.weight(1f)) { MasteryBadgeDisplay("II",  tank.masteryBadge.ordinal >= 2, Color(0xFF9CA3AF)) }
+                    Box(modifier = Modifier.weight(1f)) { MasteryBadgeDisplay("I",   tank.masteryBadge.ordinal >= 3, Color(0xFFD1D5DB)) }
+                    Box(modifier = Modifier.weight(1f)) { MasteryBadgeDisplay("ACE", tank.masteryBadge.ordinal >= 4, Color(0xFFFBBF24)) }
                 }
                 if (tank.marksOfExcellence > 0) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -245,7 +245,7 @@ private fun DmgBar(label: String, value: Int, fraction: Float, color: Color) {
 @Composable
 private fun MasteryBadgeDisplay(label: String, achieved: Boolean, color: Color) {
     Box(
-        modifier = Modifier.weight(1f)
+        modifier = Modifier.fillMaxWidth()
             .background(if (achieved) color.copy(0.1f) else Color.Black.copy(0.3f), RoundedCornerShape(6.dp))
             .border(1.dp, if (achieved) color.copy(0.4f) else DarkCardBorder, RoundedCornerShape(6.dp))
             .padding(vertical = 6.dp),
