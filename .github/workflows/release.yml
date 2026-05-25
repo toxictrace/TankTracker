@@ -32,9 +32,9 @@ jobs:
         run: |
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=${{ github.workspace }}/keystore.jks \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
+            -Pandroid.injected.signing.store.password=tanktracker123 \
+            -Pandroid.injected.signing.key.alias=tanktracker \
+            -Pandroid.injected.signing.key.password=tanktracker123
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
