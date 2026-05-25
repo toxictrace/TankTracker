@@ -10,7 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -82,7 +82,7 @@ fun HomeScreen(player: PlayerProfile) {
             Column(horizontalAlignment = Alignment.End) {
                 Text("GLOBAL PR", color = SteelGray, fontSize = 8.sp, fontFamily = FontFamily.Monospace)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TrendingUp, null, tint = NeonOrange, modifier = Modifier.size(12.dp))
+                    Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = NeonOrange, modifier = Modifier.size(12.dp))
                     Spacer(modifier = Modifier.width(3.dp))
                     Text(
                         "#${player.globalRating}",
@@ -156,7 +156,7 @@ fun HomeScreen(player: PlayerProfile) {
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(modifier = Modifier.weight(1f)) {
-                PrimaryMetricTile("K/D RATIO", player.kdRatio.toString(), "Kill / Death", Icons.Default.TrendingUp, NeonOrange)
+                PrimaryMetricTile("K/D RATIO", player.kdRatio.toString(), "Kill / Death", Icons.AutoMirrored.Filled.TrendingUp, NeonOrange)
             }
             Box(modifier = Modifier.weight(1f)) {
                 PrimaryMetricTile("SURVIVAL", "${player.survivalRate}%", "Survival Rate", Icons.Default.Shield, NeonGreen)

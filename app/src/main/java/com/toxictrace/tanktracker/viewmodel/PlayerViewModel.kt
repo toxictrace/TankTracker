@@ -103,7 +103,7 @@ class PlayerViewModel : ViewModel() {
                     TankInfo(
                         id = stat.tankId,
                         name = veh.name,
-                        nation = veh.nation.capitalize(),
+                        nation = veh.nation.replaceFirstChar { it.uppercase() },
                         tier = veh.tier,
                         tankClass = veh.type.toTankClass(),
                         battles = battles,
