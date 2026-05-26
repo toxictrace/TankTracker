@@ -22,11 +22,12 @@ private data class NavItem(val label: String, val icon: ImageVector, val route: 
 @Composable
 fun MainScreen(profile: PlayerProfile, onSearchNewPlayer: () -> Unit) {
     val navItems = listOf(
-        NavItem("Home",    Icons.Default.Home,                        "home"),
-        NavItem("Armory",  Icons.AutoMirrored.Filled.List,            "armory"),
-        NavItem("Session", Icons.Default.Timer,                       "session"),
-        NavItem("Tactics", Icons.AutoMirrored.Filled.TrendingUp,      "tactics"),
-        NavItem("Hangar",  Icons.Default.Garage,                      "hangar")
+        NavItem("Home",    Icons.Default.Home,                     "home"),
+        NavItem("Armory",  Icons.AutoMirrored.Filled.List,         "armory"),
+        NavItem("Session", Icons.Default.Timer,                    "session"),
+        NavItem("Tactics", Icons.AutoMirrored.Filled.TrendingUp,   "tactics"),
+        NavItem("Compare", Icons.Default.CompareArrows,            "compare"),
+        NavItem("Hangar",  Icons.Default.Garage,                   "hangar")
     )
     var route by remember { mutableStateOf("home") }
 
@@ -38,9 +39,9 @@ fun MainScreen(profile: PlayerProfile, onSearchNewPlayer: () -> Unit) {
                     NavigationBarItem(
                         selected = route == item.route,
                         onClick = { route = item.route },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(20.dp)) },
                         label = {
-                            Text(item.label, fontSize = 8.sp,
+                            Text(item.label, fontSize = 7.sp,
                                 fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -66,6 +67,7 @@ fun MainScreen(profile: PlayerProfile, onSearchNewPlayer: () -> Unit) {
                 "armory"  -> ArmoryScreen(tanks = profile.tanks)
                 "session" -> SessionScreen(profile = profile)
                 "tactics" -> TacticsScreen(player = profile)
+                "compare" -> CompareScreen(currentProfile = profile)
                 "hangar"  -> HangarScreen(player = profile, onSearchNewPlayer = onSearchNewPlayer)
             }
         }
