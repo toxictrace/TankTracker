@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -26,6 +27,7 @@ import com.toxictrace.tanktracker.model.PlayerProfile
 import com.toxictrace.tanktracker.model.TankInfo
 import com.toxictrace.tanktracker.ui.components.ComposeMasteryBadge
 import com.toxictrace.tanktracker.ui.components.NationBadge
+import com.toxictrace.tanktracker.auth.AuthManager
 import com.toxictrace.tanktracker.ui.components.TacticalCard
 import com.toxictrace.tanktracker.ui.components.TankMiniClassIcon
 import com.toxictrace.tanktracker.ui.theme.*
@@ -82,6 +84,21 @@ fun HangarScreen(player: PlayerProfile, onSearchNewPlayer: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Search, null, tint = NeonOrange, modifier = Modifier.size(14.dp))
                     Text("NEW", color = NeonOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                }
+                // Logout button
+                val ctx = LocalContext.current
+                if (AuthManager.isLoggedIn(ctx)) {
+                    Row(
+                        modifier = Modifier
+                            .background(DarkSurface, RoundedCornerShape(6.dp))
+                            .border(1.dp, NeonRed.copy(0.3f), RoundedCornerShape(6.dp))
+                            .clickable { AuthManager.logout(ctx); onSearchNewPlayer() }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Default.Logout, null, tint = NeonRed, modifier = Modifier.size(14.dp))
+                    }
                 }
             }
         }

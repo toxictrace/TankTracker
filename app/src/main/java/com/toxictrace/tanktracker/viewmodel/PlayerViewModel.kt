@@ -213,6 +213,8 @@ class PlayerViewModel : ViewModel() {
 
     fun resetToIdle() { _uiState.value = UiState.Idle }
 
+    fun resetToSearch() { _uiState.value = UiState.SearchResults(emptyList()) }
+
     private fun approximateWn8(winRate: Double, avgDmg: Int, battles: Int): Int {
         if (battles < 10) return 0
         return ((avgDmg / 10.0) + (winRate - 49.0) * 40).toInt().coerceIn(0, 4000)
